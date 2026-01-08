@@ -6,81 +6,46 @@
     <title>WebChat - WhatsApp Style</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
-        :root { 
-            --wa-green: #075E54; 
-            --wa-light-green: #25D366; 
-            --bg-gray: #e5ddd5; 
-        }
-        
-        body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #dadbd3; }
-        
-        /* Sidebar - List of Online People */
+        :root { --wa-green: #075E54; --wa-light-green: #25D366; --bg-gray: #e5ddd5; }
+        body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #dadbd3; overflow: hidden; }
         #sidebar { width: 30%; min-width: 250px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-        .header { background: #ededed; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between;}
+        .header { background: #ededed; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; align-items: center; height: 60px; box-sizing: border-box; }
         #user-list { flex: 1; overflow-y: auto; }
-        .user-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; transition: 0.2s; display: flex; align-items: center; }
+        .user-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; align-items: center; }
         .user-item:hover { background: #f5f5f5; }
-        .user-item::before { content: ""; width: 40px; height: 40px; background: #00a884; border-radius: 50%; margin-right: 15px; }
-
-        /* Main Chat Window */
+        .user-item::before { content: ""; width: 40px; height: 40px; background: #00a884; border-radius: 50%; margin-right: 15px; flex-shrink: 0; }
         #chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-gray); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
         #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-
-        /* WhatsApp Style Bubbles */
-        .msg { 
-            max-width: 60%; 
-            padding: 8px 12px; 
-            font-size: 14.5px; 
-            position: relative; 
-            box-shadow: 0 1px 1px rgba(0,0,0,0.1);
-            line-height: 1.4;
-        }
-        .sent { 
-            align-self: flex-end; 
-            background: #dcf8c6; 
-            border-radius: 7.5px 0 7.5px 7.5px; 
-        }
-        .received { 
-            align-self: flex-start; 
-            background: white; 
-            border-radius: 0 7.5px 7.5px 7.5px; 
-        }
-
-        /* Blue Checkmarks */
-        .status { font-size: 10px; color: #34b7f1; margin-left: 8px; vertical-align: bottom; }
-
-        /* Input Bar at Bottom */
-        #input-area { background: #f0f0f0; padding: 10px 15px; display: flex; align-items: center; }
-        input#msg-input { flex: 1; border: none; padding: 10px 15px; border-radius: 20px; outline: none; font-size: 15px; }
-        button#send-btn { background: var(--wa-green); color: white; border: none; padding: 10px 20px; border-radius: 20px; margin-left: 10px; cursor: pointer; font-weight: bold; }
-
-        /* Nickname Popup */
+        .msg { max-width: 65%; padding: 8px 12px; font-size: 14.5px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); line-height: 1.4; word-wrap: break-word; }
+        .sent { align-self: flex-end; background: #dcf8c6; border-radius: 7.5px 0 7.5px 7.5px; }
+        .received { align-self: flex-start; background: white; border-radius: 0 7.5px 7.5px 7.5px; }
+        .status { font-size: 10px; color: #34b7f1; margin-left: 8px; }
+        #input-area { background: #f0f0f0; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
+        input#msg-input { flex: 1; border: none; padding: 12px 15px; border-radius: 20px; outline: none; font-size: 15px; }
+        button#send-btn { background: var(--wa-green); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
         #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 100; }
         .modal { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 17px 50px 0 rgba(0,0,0,0.19); }
         .modal input { padding: 12px; width: 250px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; display: block; }
-        .modal button { background: #00a884; color: white; border: none; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .modal button { background: #00a884; color: white; border: none; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
     </style>
 </head>
 <body>
 
     <div id="overlay">
         <div class="modal">
-            <h2 style="color: #41525d;">Welcome to WebChat</h2>
-            <p style="color: #667781;">Enter your name to start chatting</p>
-            <input type="text" id="nickname-input" placeholder="Your name...">
+            <h2 style="color: #41525d; margin-top: 0;">WebChat</h2>
+            <input type="text" id="nickname-input" placeholder="Enter your name...">
             <button onclick="joinChat()">START CHATTING</button>
         </div>
     </div>
 
     <div id="sidebar">
-        <div class="header">
-            <span>Online Users</span>
-        </div>
+        <div class="header">Online Users</div>
         <div id="user-list"></div>
     </div>
 
     <div id="chat-area">
-        <div class="header" id="chat-with">Select someone to chat with</div>
+        <div class="header" id="chat-with">Select a user</div>
         <div id="messages"></div>
         <div id="input-area">
             <input type="text" id="msg-input" placeholder="Type a message">
@@ -89,26 +54,22 @@
     </div>
 
     <script>
-        // CHANGE THIS URL to your actual Render link
         const socket = io('https://mrfreakmessaging.onrender.com'); 
-        
         let myNickname = "";
         let selectedUser = null;
 
         function joinChat() {
             const nick = document.getElementById('nickname-input').value;
-            if(!nick) return alert("Please enter a name!");
+            if(!nick) return alert("Enter a name!");
             myNickname = nick;
             socket.emit('store-user', nick);
             document.getElementById('overlay').style.display = 'none';
         }
 
-        // Listen for updates to the online user list
         socket.on('update-users', (users) => {
             const list = document.getElementById('user-list');
             list.innerHTML = "";
             users.forEach(user => {
-                // Don't show yourself in the list
                 if(user.id !== socket.id) {
                     const div = document.createElement('div');
                     div.className = 'user-item';
@@ -116,25 +77,21 @@
                     div.onclick = () => {
                         selectedUser = user.id;
                         document.getElementById('chat-with').innerText = "Chatting with " + user.nickname;
-                        document.getElementById('messages').innerHTML = ""; // Clear screen for private chat
+                        document.getElementById('messages').innerHTML = "";
                     };
                     list.appendChild(div);
                 }
             });
         });
 
-        // Send a message
         document.getElementById('send-btn').onclick = () => {
             const text = document.getElementById('msg-input').value;
-            if(!text) return;
-            if(!selectedUser) return alert("Click a user on the left first!");
-            
+            if(!text || !selectedUser) return;
             socket.emit('private-msg', { to: selectedUser, message: text, from: myNickname });
             appendMessage(text, 'sent');
             document.getElementById('msg-input').value = "";
         };
 
-        // Receive a message
         socket.on('new-msg', (data) => {
             if(data.fromId === selectedUser) {
                 appendMessage(data.message, 'received');
@@ -143,27 +100,18 @@
             }
         });
 
-        // Helper to put bubbles on screen
         function appendMessage(text, type) {
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            
-            // Add blue checkmarks to sent messages
             const status = type === 'sent' ? '<span class="status">✓✓</span>' : '';
             div.innerHTML = `<span>${text}</span>${status}`;
-            
             const msgContainer = document.getElementById('messages');
             msgContainer.appendChild(div);
-            
-            // Auto-scroll to the bottom
             msgContainer.scrollTop = msgContainer.scrollHeight;
         }
 
-        // Allow pressing "Enter" to send
-        document.getElementById('msg-input').addEventListener("keypress", (event) => {
-            if (event.key === "Enter") {
-                document.getElementById('send-btn').click();
-            }
+        document.getElementById('msg-input').addEventListener("keypress", (e) => {
+            if (e.key === "Enter") document.getElementById('send-btn').click();
         });
     </script>
 </body>
