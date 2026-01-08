@@ -1,0 +1,25 @@
+const io = require('socket.io')(process.env.PORT || 3000, {
+    cors: { origin: "*" }
+});
+
+let users = [];
+
+io.on('connection', (socket) => {
+    socket.on('store-user', (nickname) => {
+        users.push({ id: socket.id, nickname: nickname });
+        io.emit('update-users', users);
+    });
+
+    socket.on('private-msg', (data) => {
+        io.to(data.to).emit('new-msg', {
+            message: data.message,
+            fromId: socket.id,
+            fromName: data.from
+        });
+    });
+
+    socket.on('disconnect', () => {
+        users = users.filter(u => u.id !== socket.id);
+        io.emit('update-users', users);
+    });
+});
