@@ -5,9 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebChat - WhatsApp Style</title>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-    <style>
-        :root { --wa-green: #075E54; --wa-light-green: #25D366; --bg-gray: #ece5dd; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #dadbd3; }
+<style>
+    :root { 
+        --wa-green: #075E54; 
+        --wa-light-green: #25D366; 
+        --bg-gray: #e5ddd5; /* Classic WhatsApp background color */
+    }
+    
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; }
+    
+    /* Sidebar styling */
+    #sidebar { width: 350px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+    .header { background: #ededed; padding: 15px; font-weight: bold; display: flex; align-items: center; border-bottom: 1px solid #ddd; }
+    
+    #user-list { flex: 1; overflow-y: auto; background: white; }
+    .user-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; align-items: center; }
+    .user-item:hover { background: #f5f5f5; }
+    .user-item::before { content: ""; width: 40px; height: 40px; background: #ccc; border-radius: 50%; margin-right: 15px; }
+
+    /* Chat Area */
+    #chat-area { flex: 1; display: flex; flex-direction: column; background: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+    
+    #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+
+    /* The WhatsApp Bubbles */
+    .msg { 
+        max-width: 65%; 
+        padding: 8px 12px; 
+        font-size: 14.5px; 
+        position: relative; 
+        box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+    }
+    
+    .sent { 
+        align-self: flex-end; 
+        background: #dcf8c6; 
+        border-radius: 7.5px 0 7.5px 7.5px; 
+    }
+    
+    .received { 
+        align-self: flex-start; 
+        background: white; 
+        border-radius: 0 7.5px 7.5px 7.5px; 
+    }
+
+    /* Read Receipt (The Blue Checks) */
+    .status { 
+        font-size: 10px; 
+        color: #34b7f1; 
+        float: right; 
+        margin-top: 5px; 
+        margin-left: 10px;
+    }
+
+    /* Input Area */
+    #input-area { background: #f0f0f0; padding: 10px 20px; display: flex; align-items: center; }
+    input#msg-input { flex: 1; border: none; padding: 12px; border-radius: 25px; outline: none; font-size: 15px; }
+    button#send-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #919191; margin-left: 10px; }
+
+    /* Modal for Nickname */
+    #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 100; }
+    .modal { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+    .modal input { width: 80%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px; }
+</style>
         
         /* Sidebar */
         #sidebar { width: 30%; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
@@ -102,13 +162,19 @@
             }
         });
 
-        function appendMessage(text, type) {
-            const div = document.createElement('div');
-            div.className = `msg ${type}`;
-            div.innerText = text;
-            document.getElementById('messages').appendChild(div);
-        }
+       function appendMessage(text, type) {
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    // The checkmarks added here:
+    const statusHtml = type === 'sent' ? '<span class="status">✓✓</span>' : '';
+    div.innerHTML = `<span>${text}</span>${statusHtml}`;
+    document.getElementById('messages').appendChild(div);
+    // Auto-scroll to bottom
+    const objDiv = document.getElementById("messages");
+    objDiv.scrollTop = objDiv.scrollHeight;
+}
     </script>
 </body>
 
 </html>
+
