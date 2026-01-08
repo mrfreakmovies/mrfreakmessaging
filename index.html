@@ -3,63 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebChat - WhatsApp Style</title>
+    <title>WebChat - Video & Messages</title>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root { --wa-green: #075E54; --wa-light-green: #25D366; --bg-gray: #e5ddd5; }
-        body { font-family: 'Segoe UI', Helvetica, Arial, sans-serif; margin: 0; display: flex; height: 100vh; background: #dadbd3; overflow: hidden; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #dadbd3; overflow: hidden; }
+        
+        /* Layout */
         #sidebar { width: 30%; min-width: 250px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
-        .header { background: #ededed; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; align-items: center; height: 60px; box-sizing: border-box; }
+        #chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-gray); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); position: relative; }
+        
+        /* Headers */
+        .header { background: #ededed; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; height: 60px; box-sizing: border-box; }
+        
+        /* User List */
         #user-list { flex: 1; overflow-y: auto; }
         .user-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; align-items: center; }
         .user-item:hover { background: #f5f5f5; }
-        .user-item::before { content: ""; width: 40px; height: 40px; background: #00a884; border-radius: 50%; margin-right: 15px; flex-shrink: 0; }
-        #chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-gray); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
+        .user-item::before { content: ""; width: 35px; height: 35px; background: #00a884; border-radius: 50%; margin-right: 12px; }
+
+        /* Messages */
         #messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 65%; padding: 8px 12px; font-size: 14.5px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); line-height: 1.4; word-wrap: break-word; }
+        .msg { max-width: 65%; padding: 8px 12px; font-size: 14.5px; position: relative; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
         .sent { align-self: flex-end; background: #dcf8c6; border-radius: 7.5px 0 7.5px 7.5px; }
         .received { align-self: flex-start; background: white; border-radius: 0 7.5px 7.5px 7.5px; }
-        .status { font-size: 10px; color: #34b7f1; margin-left: 8px; }
+        
+        /* Video Calling UI */
+        #video-grid { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 1000; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { width: 120px; height: 160px; position: absolute; bottom: 80px; right: 20px; border: 2px solid white; border-radius: 8px; object-fit: cover; }
+        .call-tools { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        .end-btn { background: #ff3b30; color: white; border: none; padding: 12px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; }
+
+        /* Inputs */
         #input-area { background: #f0f0f0; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
-        input#msg-input { flex: 1; border: none; padding: 12px 15px; border-radius: 20px; outline: none; font-size: 15px; }
-        button#send-btn { background: var(--wa-green); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; font-weight: bold; }
-        #overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 100; }
-        .modal { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 17px 50px 0 rgba(0,0,0,0.19); }
-        .modal input { padding: 12px; width: 250px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 20px; display: block; }
-        .modal button { background: #00a884; color: white; border: none; padding: 10px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
- #video-grid {
-    display: none; /* Hidden until a call starts */
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    background: black;
-    width: 80%; height: 80%;
-    z-index: 1000;
-    border-radius: 15px;
-}
-video { width: 100%; height: 100%; object-fit: cover; }
-#local-video { width: 150px; height: 100px; position: absolute; bottom: 10px; right: 10px; border: 2px solid white; }
-#close-call { position: absolute; top: 10px; right: 10px; background: red; color: white; border: none; padding: 10px; cursor: pointer; }
+        input#msg-input { flex: 1; border: none; padding: 12px 15px; border-radius: 20px; outline: none; }
+        #send-btn { background: var(--wa-green); color: white; border: none; padding: 10px 20px; border-radius: 20px; cursor: pointer; }
+
+        /* Welcome Overlay */
+        #overlay { position: fixed; inset: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .modal { background: white; padding: 40px; border-radius: 10px; text-align: center; box-shadow: 0 17px 50px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
     <div id="overlay">
         <div class="modal">
-            <h2 style="color: #41525d; margin-top: 0;">WebChat</h2>
-            <input type="text" id="nickname-input" placeholder="Enter your name...">
-            <button onclick="joinChat()">START CHATTING</button>
+            <h2>WebChat</h2>
+            <input type="text" id="nickname-input" placeholder="Enter Nickname..." style="padding: 10px; width: 200px; margin-bottom: 15px;"><br>
+            <button onclick="joinChat()" style="background:#00a884; color:white; border:none; padding:10px 30px; border-radius:5px; cursor:pointer;">Join Chat</button>
         </div>
     </div>
 
     <div id="sidebar">
-        <div class="header">Online Users</div>
+        <div class="header">Contacts</div>
         <div id="user-list"></div>
     </div>
 
     <div id="chat-area">
-        <div class="header" id="chat-with">Select a user</div>
+        <div class="header">
+            <span id="chat-with">Select a user</span>
+            <button onclick="startCall()" style="background:none; border:none; font-size:22px; cursor:pointer;">📞</button>
+        </div>
+        
         <div id="messages"></div>
+
+        <div id="video-grid">
+            <video id="remote-video" autoplay></video>
+            <video id="local-video" autoplay muted></video>
+            <div class="call-tools">
+                <button class="end-btn" onclick="endCall()">End Call</button>
+            </div>
+        </div>
+
         <div id="input-area">
             <input type="text" id="msg-input" placeholder="Type a message">
             <button id="send-btn">SEND</button>
@@ -68,12 +85,21 @@ video { width: 100%; height: 100%; object-fit: cover; }
 
     <script>
         const socket = io('https://mrfreakmessaging.onrender.com'); 
+        const peer = new Peer(); 
         let myNickname = "";
         let selectedUser = null;
+        let myStream;
+
+        // Setup Camera
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(stream => {
+                myStream = stream;
+                document.getElementById('local-video').srcObject = stream;
+            }).catch(err => console.error("Camera access denied", err));
 
         function joinChat() {
             const nick = document.getElementById('nickname-input').value;
-            if(!nick) return alert("Enter a name!");
+            if(!nick) return;
             myNickname = nick;
             socket.emit('store-user', nick);
             document.getElementById('overlay').style.display = 'none';
@@ -89,7 +115,7 @@ video { width: 100%; height: 100%; object-fit: cover; }
                     div.innerText = user.nickname;
                     div.onclick = () => {
                         selectedUser = user.id;
-                        document.getElementById('chat-with').innerText = "Chatting with " + user.nickname;
+                        document.getElementById('chat-with').innerText = user.nickname;
                         document.getElementById('messages').innerHTML = "";
                     };
                     list.appendChild(div);
@@ -97,36 +123,61 @@ video { width: 100%; height: 100%; object-fit: cover; }
             });
         });
 
-        document.getElementById('send-btn').onclick = () => {
+        // Messages
+        document.getElementById('send-btn').onclick = sendMessage;
+        function sendMessage() {
             const text = document.getElementById('msg-input').value;
             if(!text || !selectedUser) return;
             socket.emit('private-msg', { to: selectedUser, message: text, from: myNickname });
             appendMessage(text, 'sent');
             document.getElementById('msg-input').value = "";
-        };
+        }
 
         socket.on('new-msg', (data) => {
-            if(data.fromId === selectedUser) {
-                appendMessage(data.message, 'received');
-            } else {
-                alert("New message from " + data.fromName);
-            }
+            if(data.fromId === selectedUser) appendMessage(data.message, 'received');
+            else alert("New message from " + data.fromName);
         });
 
         function appendMessage(text, type) {
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            const status = type === 'sent' ? '<span class="status">✓✓</span>' : '';
-            div.innerHTML = `<span>${text}</span>${status}`;
-            const msgContainer = document.getElementById('messages');
-            msgContainer.appendChild(div);
-            msgContainer.scrollTop = msgContainer.scrollHeight;
+            div.innerHTML = `<span>${text}</span> ${type==='sent' ? '<span style="color:#34b7f1; font-size:10px;">✓✓</span>':''}`;
+            document.getElementById('messages').appendChild(div);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         }
 
-        document.getElementById('msg-input').addEventListener("keypress", (e) => {
-            if (e.key === "Enter") document.getElementById('send-btn').click();
+        // --- VIDEO CALL LOGIC ---
+        function startCall() {
+            if(!selectedUser) return alert("Select someone to call!");
+            document.getElementById('video-grid').style.display = 'block';
+            socket.emit('request-video-id', { to: selectedUser, myPeerId: peer.id });
+        }
+
+        socket.on('receive-video-id', (data) => {
+            if(confirm("Accept incoming call?")) {
+                document.getElementById('video-grid').style.display = 'block';
+                const call = peer.call(data.peerId, myStream);
+                handleStream(call);
+            }
         });
+
+        peer.on('call', (call) => {
+            document.getElementById('video-grid').style.display = 'block';
+            call.answer(myStream);
+            handleStream(call);
+        });
+
+        function handleStream(call) {
+            call.on('stream', (userStream) => {
+                document.getElementById('remote-video').srcObject = userStream;
+            });
+        }
+
+        function endCall() {
+            location.reload(); 
+        }
+
+        document.getElementById('msg-input').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
     </script>
 </body>
 </html>
-
