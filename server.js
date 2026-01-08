@@ -1,5 +1,5 @@
 const io = require('socket.io')(process.env.PORT || 3000, {
-    cors: { origin: "*" } // This allows your Vercel site to talk to this server
+    cors: { origin: "*" }
 });
 
 let users = [];
@@ -7,17 +7,14 @@ let users = [];
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // 1. When a user joins and sets their nickname
+    // 1. Store User Nickname
     socket.on('store-user', (nickname) => {
-        // Remove old entry if same ID exists
         users = users.filter(u => u.id !== socket.id);
         users.push({ id: socket.id, nickname: nickname });
-        
-        // Tell everyone who is online
         io.emit('update-users', users);
     });
 
-    // 2. Handling Private Messages
+    // 2. Private Messaging
     socket.on('private-msg', (data) => {
         io.to(data.to).emit('new-msg', {
             message: data.message,
@@ -26,16 +23,16 @@ io.on('connection', (socket) => {
         });
     });
 
-    // 3. VIDEO CALL SIGNALING (The part we just added)
-    // This sends your "Peer ID" to the person you are calling
+    // 3. Updated Calling Logic (Passes PeerID and Call Type)
     socket.on('request-video-id', (data) => {
         io.to(data.to).emit('receive-video-id', { 
             peerId: data.myPeerId, 
-            fromName: data.fromName 
+            fromName: data.fromName,
+            isAudio: data.isAudio // Tells the receiver if it's voice or video
         });
     });
 
-    // 4. Handling Disconnects
+    // 4. Handle Disconnect
     socket.on('disconnect', () => {
         users = users.filter(u => u.id !== socket.id);
         io.emit('update-users', users);
