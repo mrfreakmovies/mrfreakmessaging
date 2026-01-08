@@ -3,17 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebChat Pro - Accounts & History</title>
+    <title>WebChat Pro</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         :root { --wa-green: #075E54; --wa-light-green: #25D366; --bg-gray: #e5ddd5; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; background: #dadbd3; overflow: hidden; }
         
-        #sidebar { width: 30%; min-width: 250px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+        /* Auth Screen */
+        #auth-overlay { position: fixed; inset: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .auth-card { background: white; padding: 30px; border-radius: 10px; text-align: center; width: 320px; box-shadow: 0 17px 50px rgba(0,0,0,0.1); }
+        .auth-card h2 { color: var(--wa-green); margin-bottom: 20px; }
+        .auth-card input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .auth-btn { width: 100%; background: #00a884; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        .toggle-link { color: #039be5; cursor: pointer; font-size: 13px; margin-top: 15px; display: block; }
+
+        /* Main App Layout */
+        #sidebar { width: 30%; min-width: 260px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
         #chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--bg-gray); background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); position: relative; }
         
-        .header { background: #ededed; padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; height: 60px; box-sizing: border-box; }
+        .header { background: #ededed; padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; height: 60px; box-sizing: border-box; }
         
         #user-list { flex: 1; overflow-y: auto; }
         .user-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; align-items: center; }
@@ -25,16 +34,12 @@
         .sent { align-self: flex-end; background: #dcf8c6; border-radius: 7.5px 0 7.5px 7.5px; }
         .received { align-self: flex-start; background: white; border-radius: 0 7.5px 7.5px 7.5px; }
         
-        /* Auth Overlay */
-        #auth-overlay { position: fixed; inset: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; z-index: 2000; }
-        .auth-card { background: white; padding: 30px; border-radius: 10px; text-align: center; width: 300px; box-shadow: 0 17px 50px rgba(0,0,0,0.1); }
-        .auth-card input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        .auth-btn { width: 100%; background: #00a884; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        .toggle-link { color: #039be5; cursor: pointer; font-size: 13px; margin-top: 15px; display: block; }
-
+        /* Video/Audio Calling */
         #video-grid { display: none; position: absolute; inset: 0; background: black; z-index: 1000; }
         #remote-video { width: 100%; height: 100%; object-fit: cover; }
-        #local-video { width: 100px; height: 130px; position: absolute; bottom: 80px; right: 20px; border: 2px solid white; border-radius: 8px; }
+        #local-video { width: 100px; height: 130px; position: absolute; bottom: 80px; right: 20px; border: 2px solid white; border-radius: 8px; object-fit: cover; }
+        #audio-ui { display: none; height: 100%; flex-direction: column; align-items: center; justify-content: center; color: white; background: var(--wa-green); }
+
         #input-area { background: #f0f0f0; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
         input#msg-input { flex: 1; border: none; padding: 12px 15px; border-radius: 20px; outline: none; }
     </style>
@@ -59,28 +64,37 @@
     <div id="chat-area">
         <div class="header">
             <span id="chat-with">Select a user</span>
-            <div>
-                <button onclick="startCall(true)" style="background:none; border:none; cursor:pointer;">🎙️</button>
-                <button onclick="startCall(false)" style="background:none; border:none; cursor:pointer;">📞</button>
+            <div id="call-btns" style="display:none;">
+                <button onclick="startCall(true)" style="background:none; border:none; cursor:pointer; font-size:20px;">🎙️</button>
+                <button onclick="startCall(false)" style="background:none; border:none; cursor:pointer; font-size:20px; margin-left:10px;">📞</button>
             </div>
         </div>
         <div id="messages"></div>
         <div id="video-grid">
+            <div id="audio-ui"><h2>Voice Calling...</h2></div>
             <video id="remote-video" autoplay></video>
             <video id="local-video" autoplay muted></video>
-            <button onclick="location.reload()" style="position:absolute; bottom:20px; left:45%; background:red; color:white; border:none; padding:10px 20px; border-radius:20px;">End</button>
+            <button onclick="location.reload()" style="position:absolute; bottom:20px; left:40%; background:red; color:white; border:none; padding:10px 25px; border-radius:30px; cursor:pointer; font-weight:bold;">End Call</button>
         </div>
         <div id="input-area">
             <input type="text" id="msg-input" placeholder="Type a message">
-            <button onclick="sendMessage()" id="send-btn" style="background:#075E54; color:white; border:none; padding:10px 20px; border-radius:20px; cursor:pointer;">SEND</button>
+            <button onclick="sendMessage()" id="send-btn" style="background:var(--wa-green); color:white; border:none; padding:10px 20px; border-radius:20px; cursor:pointer;">SEND</button>
         </div>
     </div>
 
     <script>
         const socket = io('https://mrfreakmessaging.onrender.com'); 
+        const peer = new Peer();
         let myName = "";
         let selectedUser = { id: null, name: "" };
         let isSignup = false;
+        let myStream;
+
+        // Setup Media
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then(s => {
+            myStream = s;
+            document.getElementById('local-video').srcObject = s;
+        });
 
         function toggleAuth() {
             isSignup = !isSignup;
@@ -98,7 +112,7 @@
 
         socket.on('auth-success', (data) => {
             myName = data.username;
-            document.getElementById('my-name').innerText = "Me: " + myName;
+            document.getElementById('my-name').innerText = "Logged in as: " + myName;
             document.getElementById('auth-overlay').style.display = 'none';
         });
 
@@ -115,6 +129,7 @@
                     div.onclick = () => {
                         selectedUser = { id: user.id, name: user.nickname };
                         document.getElementById('chat-with').innerText = user.nickname;
+                        document.getElementById('call-btns').style.display = 'block';
                         document.getElementById('messages').innerHTML = "";
                         socket.emit('get-history', { me: myName, with: user.nickname });
                     };
@@ -137,18 +152,40 @@
 
         socket.on('new-msg', (data) => {
             if(data.fromName === selectedUser.name) appendMessage(data.message, 'received');
+            else alert("New message from " + data.fromName);
         });
 
         function appendMessage(text, type) {
             const div = document.createElement('div');
             div.className = `msg ${type}`;
-            div.innerHTML = `<span>${text}</span> ${type==='sent' ? '<span style="color:#34b7f1; font-size:10px;">✓✓</span>':''}`;
+            div.innerHTML = `<span>${text}</span> ${type==='sent' ? '<span style="color:#34b7f1; font-size:10px; margin-left:5px;">✓✓</span>':''}`;
             document.getElementById('messages').appendChild(div);
             document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         }
 
-        // Keep existing Video Call logic from previous steps below here...
-        // (For brevity, I've simplified, but the PeerJS logic stays the same)
+        // Call Logic
+        function startCall(isAudio) {
+            document.getElementById('video-grid').style.display = 'block';
+            if(isAudio) document.getElementById('audio-ui').style.display = 'flex';
+            socket.emit('request-video-id', { to: selectedUser.id, myPeerId: peer.id, isAudio: isAudio });
+        }
+
+        socket.on('receive-video-id', (data) => {
+            if(confirm("Accept incoming call?")) {
+                document.getElementById('video-grid').style.display = 'block';
+                if(data.isAudio) document.getElementById('audio-ui').style.display = 'flex';
+                const call = peer.call(data.peerId, myStream);
+                call.on('stream', s => document.getElementById('remote-video').srcObject = s);
+            }
+        });
+
+        peer.on('call', c => {
+            document.getElementById('video-grid').style.display = 'block';
+            c.answer(myStream);
+            c.on('stream', s => document.getElementById('remote-video').srcObject = s);
+        });
+
+        document.getElementById('msg-input').onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
     </script>
 </body>
 </html>
