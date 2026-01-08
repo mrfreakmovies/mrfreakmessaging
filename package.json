@@ -1,11 +1,5 @@
-{
-  "name": "free-chat-server",
-  "version": "1.0.0",
-  "main": "server.js",
-  "dependencies": {
-    "socket.io": "^4.7.2"
-  },
-  "scripts": {
-    "start": "node server.js"
-  }
+"dependencies": {
+  "socket.io": "^4.7.2",
+  "mongoose": "^8.0.0",
+  "bcryptjs": "^2.4.3"
 }
